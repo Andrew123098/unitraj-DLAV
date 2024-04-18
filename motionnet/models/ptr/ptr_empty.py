@@ -263,31 +263,10 @@ class PTR(BaseModel):
         :param agent_masks: (B, T, N)
         :return: (T, B, N, H)
         '''
-        # From co-pilot
-        ################################################################################################################
-        # Get the dimensions of the input tensors
-        T, B, N, H = agents_emb.size()
-
-        # Initialize an empty tensor to store the output embeddings
-        output_emb = torch.zeros_like(agents_emb)
-
-        # Iterate over each time step
-        for t in range(T):
-            # Get the current time step embeddings
-            current_emb = agents_emb[t]
-
-            # Compute the attention weights between the current time step and all previous time steps
-            attn_weights = layer(current_emb, agents_emb[:t+1], src_key_padding_mask=~agent_masks[:, :t+1])
-
-            # Apply the attention weights to the previous time step embeddings
-            attended_emb = torch.matmul(attn_weights, agents_emb[:t+1])
-
-            # Combine the attended embeddings with the current time step embeddings
-            output_emb[t] = current_emb + attended_emb
-
-        return output_emb
-        ################################################################################################################
-
+        ######################## Your code here ########################
+        pass
+        ################################################################
+        return agents_emb
 
     def social_attn_fn(self, agents_emb, agent_masks, layer):
         '''
