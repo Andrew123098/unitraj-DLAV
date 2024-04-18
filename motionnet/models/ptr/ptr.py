@@ -259,35 +259,20 @@ class PTR(BaseModel):
         Gets agents embeddings and agents mask, and applies the temporal attention layer per agent.
         Make sure to apply the agent mask in the layer function (you could use src_key_padding_mask argument).
         Also don't forget to use positional encoding.
-        :param agents_emb: (T, B, N, H)
+        :param agents_emb: (T, B, N, H) # The dimensions are Time (T), Batch size (B), Number of agents (N), and Embedding size (H).
         :param agent_masks: (B, T, N)
         :return: (T, B, N, H)
         '''
-        # From co-pilot
-        ################################################################################################################
-        # Get the dimensions of the input tensors
-        T, B, N, H = agents_emb.size()
+        ######################## Your code here ########################
+        #Apply positional encoding
+        pos_encoder = PositionalEncoding(d_model=agents_emb.shape[-1])
+        agents_emb = pos_encoder(agents_emb)
 
-        # Initialize an empty tensor to store the output embeddings
-        output_emb = torch.zeros_like(agents_emb)
-
-        # Iterate over each time step
-        for t in range(T):
-            # Get the current time step embeddings
-            current_emb = agents_emb[t]
-
-            # Compute the attention weights between the current time step and all previous time steps
-            attn_weights = layer(current_emb, agents_emb[:t+1], src_key_padding_mask=~agent_masks[:, :t+1])
-
-            # Apply the attention weights to the previous time step embeddings
-            attended_emb = torch.matmul(attn_weights, agents_emb[:t+1])
-
-            # Combine the attended embeddings with the current time step embeddings
-            output_emb[t] = current_emb + attended_emb
-
-        return output_emb
-        ################################################################################################################
-
+        #Apply temporal attention layer
+        agents_emb = layer(agents_emb, agents_emb, agents_emb, src_key_padding_mask=agent_masks)
+        pass
+        ################################################################
+        return agents_emb
 
     def social_attn_fn(self, agents_emb, agent_masks, layer):
         '''
@@ -299,6 +284,12 @@ class PTR(BaseModel):
         :return: (T, B, N, H)
         '''
         ######################## Your code here ########################
+        #Reshape agents_mask to match the shape of agents_emb
+        agent_masks = agent_masks.permute(1, 0, 2).unsqueeze(-1)
+
+        #Apply social attention layer
+        agents_emb = layer(agents_emb, agents_emb, agents_emb, src_key_padding_mask=agent_masks)
+
         pass
         ################################################################
         return agents_emb
@@ -327,6 +318,11 @@ class PTR(BaseModel):
 
         ######################## Your code here ########################
         # Apply temporal attention layers and then the social attention layers on agents_emb, each for L_enc times.
+        for _ in range(self.L_enc):
+            for temporal_layer in self.temporal_attn_layers:
+                agents_emb = temporal_layer(agents_emb)
+            for social_layer in self.social_attn_layers:  
+                agents_emb = social_layer(agents_emb)
         pass
         ################################################################
 
