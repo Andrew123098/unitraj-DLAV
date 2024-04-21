@@ -20,7 +20,7 @@ def get_parsed_args():
     parser.add_argument('--exp_name', '-e', default="test", type=str)
     parser.add_argument('--devices', '-d', nargs='+', default=[0, 1, 2, 3], type=int)
     parser.add_argument('--debug', '-g', action='store_true')
-    parser.add_argument('--ckpt_path', '-p', type=str, default=None)
+    parser.add_argument('--ckpt_path', '-p', type=str, default='C:\Users\Monica\OneDrive - epfl.ch\EPFL\CIVIL-459 Deep learning for autonomous vehicles\Project\unitraj-DLAV\motionnet\lightning_logs\version_1\checkpoints\epoch=99-val\brier_fde=9.50.ckpt')
     parser.add_argument('--seed', '-s', type=int, default=42)
     parser.add_argument('--use_ewc', '-ew', action='store_true')
     parser.add_argument('--use_smart_sampler', '-ss', action='store_true')
