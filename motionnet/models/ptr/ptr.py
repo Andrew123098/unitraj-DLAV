@@ -264,13 +264,22 @@ class PTR(BaseModel):
         :return: (T, B, N, H)
         '''
         ######################## Your code here ########################
-        #Apply positional encoding
-        pos_encoder = PositionalEncoding(d_model=agents_emb.shape[-1])
-        agents_emb = pos_encoder(agents_emb)
+        T, B, N, H = agents_emb.size()
+        # Apply positional encoding
+        agents_emb = self.pos_encoder(agents_emb)
 
-        #Apply temporal attention layer
-        agents_emb = layer(agents_emb, agents_emb, agents_emb, src_key_padding_mask=agent_masks)
-        pass
+        # Flatten the embeddings and masks
+        agents_emb_flat = agents_emb.view(T * B, N, H)
+        agent_masks_flat = agent_masks.view(B, T, N).permute(1, 0, 2).reshape(T * B, N)
+
+        # Apply temporal attention layer
+        agents_emb_flat = layer(agents_emb_flat, src_key_padding_mask=agent_masks_flat)
+
+        # Reshape the embeddings back to their original shape
+        agents_emb = agents_emb_flat.view(T, B, N, H)
+
+        print("temporal ok")
+        
         ################################################################
         return agents_emb
 
@@ -284,13 +293,20 @@ class PTR(BaseModel):
         :return: (T, B, N, H)
         '''
         ######################## Your code here ########################
-        #Reshape agents_mask to match the shape of agents_emb
-        agent_masks = agent_masks.permute(1, 0, 2).unsqueeze(-1)
+        T, B, N, H = agents_emb.size()
 
-        #Apply social attention layer
-        agents_emb = layer(agents_emb, agents_emb, agents_emb, src_key_padding_mask=agent_masks)
+        # Flatten the embeddings and masks
+        agents_emb_flat = agents_emb.view(T * B, N, H)
+        agent_masks_flat = agent_masks.view(B, T, N).permute(1, 0, 2).reshape(T * B, N)
 
-        pass
+        # Apply social attention layer
+        agents_emb_flat = layer(agents_emb_flat, src_key_padding_mask=agent_masks_flat)
+
+        # Reshape the embeddings back to their original shape
+        agents_emb = agents_emb_flat.view(T, B, N, H)
+
+        print("s")
+
         ################################################################
         return agents_emb
 
@@ -317,13 +333,9 @@ class PTR(BaseModel):
         agents_emb = self.agents_dynamic_encoder(agents_tensor).permute(1, 0, 2, 3)  # T, B, N, H
 
         ######################## Your code here ########################
-        # Apply temporal attention layers and then the social attention layers on agents_emb, each for L_enc times.
-        for _ in range(self.L_enc):
-            for temporal_layer in self.temporal_attn_layers:
-                agents_emb = temporal_layer(agents_emb)
-            for social_layer in self.social_attn_layers:  
-                agents_emb = social_layer(agents_emb)
-        pass
+        # Apply temporal and social attention
+        agents_emb = self.temporal_attn_fn(agents_emb, opps_masks, self.temporal_attn_layers)
+        agents_emb = self.social_attn_fn(agents_emb, opps_masks, self.social_attn_layers)
         ################################################################
 
         ego_soctemp_emb = agents_emb[:, :, 0]  # take ego-agent encodings only.
