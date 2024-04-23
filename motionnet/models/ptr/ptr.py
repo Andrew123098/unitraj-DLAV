@@ -265,20 +265,38 @@ class PTR(BaseModel):
         '''
         ######################## Your code here ########################
         T, B, N, H = agents_emb.size()
-        # Apply positional encoding
-        agents_emb = self.pos_encoder(agents_emb)
+        # Convert Agents embeddings sizing to (T, B*N, H)
+        agents_emb = agents_emb.permute(0, 2, 1, 3).reshape(T, N * B, H)
+
+        # Initialize a list to hold the results
+        encoded_agents = []
+
+        # Loop over the second dimension (N*B)
+        for i in range(N * B):
+            # Select the slice of shape (T, 1, H)
+            agent_slice = agents_emb[:, i:i+1, :]
+
+            # Apply positional encoding
+            encoded_slice = self.pos_encoder.forward(agent_slice)
+            
+            # Append the result to the list
+            encoded_agents.append(encoded_slice)
+
+        # Stack the results along the second dimension to get a tensor of shape (T, N*B, H)
+        agents_emb = torch.stack(encoded_agents, dim=1)
+
+        # Put back in original shape
+        agents_emb = agents_emb.view(T, B, N, H)
 
         # Flatten the embeddings and masks
-        agents_emb_flat = agents_emb.view(T * B, N, H)
-        agent_masks_flat = agent_masks.view(B, T, N).permute(1, 0, 2).reshape(T * B, N)
+        agents_emb_flat = agents_emb.reshape(T * B, N, H)
+        agent_masks_flat = agent_masks.permute(1, 0, 2).reshape(N, T * B)
 
         # Apply temporal attention layer
         agents_emb_flat = layer(agents_emb_flat, src_key_padding_mask=agent_masks_flat)
 
         # Reshape the embeddings back to their original shape
         agents_emb = agents_emb_flat.view(T, B, N, H)
-
-        print("temporal ok")
         
         ################################################################
         return agents_emb
@@ -296,17 +314,14 @@ class PTR(BaseModel):
         T, B, N, H = agents_emb.size()
 
         # Flatten the embeddings and masks
-        agents_emb_flat = agents_emb.view(T * B, N, H)
-        agent_masks_flat = agent_masks.view(B, T, N).permute(1, 0, 2).reshape(T * B, N)
+        agents_emb_flat = agents_emb.reshape(T * B, N, H)
+        agent_masks_flat = agent_masks.permute(1, 0, 2).reshape(N, T * B)
 
         # Apply social attention layer
         agents_emb_flat = layer(agents_emb_flat, src_key_padding_mask=agent_masks_flat)
 
         # Reshape the embeddings back to their original shape
         agents_emb = agents_emb_flat.view(T, B, N, H)
-
-        print("s")
-
         ################################################################
         return agents_emb
 
@@ -334,8 +349,10 @@ class PTR(BaseModel):
 
         ######################## Your code here ########################
         # Apply temporal and social attention
-        agents_emb = self.temporal_attn_fn(agents_emb, opps_masks, self.temporal_attn_layers)
-        agents_emb = self.social_attn_fn(agents_emb, opps_masks, self.social_attn_layers)
+        for layer in self.temporal_attn_layers:
+            agents_emb = self.temporal_attn_fn(agents_emb, opps_masks, layer)
+        for layer in self.social_attn_layers:
+            agents_emb = self.social_attn_fn(agents_emb, opps_masks, layer)
         ################################################################
 
         ego_soctemp_emb = agents_emb[:, :, 0]  # take ego-agent encodings only.
