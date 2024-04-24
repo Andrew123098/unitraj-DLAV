@@ -1,0 +1,15 @@
+#!/bin/bash
+#SBATCH --ntasks-per-node=20 
+#SBATCH --account civil-459
+#SBATCH --qos=civil-459
+#SBATCH --gres=gpu:1
+#SBATCH --mem=50GB
+#SBATCH --time=00:00:90
+#SBATCH --output=output.out
+#SBATCH --job-name="your-father"
+
+cd ${SLURM_SUBMIT_DIR}/
+
+module load gcc python
+source /home/ambrown/venv/bin/activate
+python3 < evaluation.py
