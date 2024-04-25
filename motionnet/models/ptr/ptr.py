@@ -16,7 +16,7 @@ class MapEncoderCNN(nn.Module):
     '''
     Regular CNN encoder for road image.
     '''
-    def __init__(self, d_k=64, dropout=0.1, c=10):
+    def __init__(self, d_k=128, dropout=0.3, c=12):
         super(MapEncoderCNN, self).__init__()
         self.dropout = dropout
         self.c = c
@@ -52,7 +52,7 @@ class MapEncoderPts(nn.Module):
     This class operates on the road lanes provided as a tensor with shape
     (B, num_road_segs, num_pts_per_road_seg, k_attr+1)
     '''
-    def __init__(self, d_k, map_attr=3, dropout=0.1):
+    def __init__(self, d_k, map_attr=3, dropout=0.3):
         super(MapEncoderPts, self).__init__()
         self.dropout = dropout
         self.d_k = d_k
@@ -60,7 +60,7 @@ class MapEncoderPts(nn.Module):
         init_ = lambda m: init(m, nn.init.xavier_normal_, lambda x: nn.init.constant_(x, 0), np.sqrt(2))
 
         self.road_pts_lin = nn.Sequential(init_(nn.Linear(map_attr, self.d_k)))
-        self.road_pts_attn_layer = nn.MultiheadAttention(self.d_k, num_heads=8, dropout=self.dropout)
+        self.road_pts_attn_layer = nn.MultiheadAttention(self.d_k, num_heads=16, dropout=self.dropout)
         self.norm1 = nn.LayerNorm(self.d_k, eps=1e-5)
         self.norm2 = nn.LayerNorm(self.d_k, eps=1e-5)
         self.map_feats = nn.Sequential(
@@ -111,7 +111,7 @@ def init(module, weight_init, bias_init, gain=1):
 
 class PositionalEncoding(nn.Module):
 
-    def __init__(self, d_model, dropout=0.1, max_len=5000):
+    def __init__(self, d_model, dropout=0.3, max_len=5000):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
 
@@ -213,7 +213,7 @@ class PTR(BaseModel):
         self.tx_decoder = nn.ModuleList(self.tx_decoder)
 
         # ============================== Positional encoder ==============================
-        self.pos_encoder = PositionalEncoding(self.d_k, dropout=0.0, max_len=self.past)
+        self.pos_encoder = PositionalEncoding(self.d_k, dropout=0.1, max_len=self.past)
 
         # ============================== OUTPUT MODEL ==============================
         self.output_model = OutputModel(d_k=self.d_k)
@@ -264,30 +264,12 @@ class PTR(BaseModel):
         :return: (T, B, N, H)
         '''
         ######################## Your code here ########################
+
+        """
+        Put Positional encoder in forward function before attention functions.
+        """
         T, B, N, H = agents_emb.size()
-        # Convert Agents embeddings sizing to (T, B*N, H)
-        agents_emb = agents_emb.permute(0, 2, 1, 3).reshape(T, N * B, H)
-
-        # Initialize a list to hold the results
-        encoded_agents = []
-
-        # Loop over the second dimension (N*B)
-        for i in range(N * B):
-            # Select the slice of shape (T, 1, H)
-            agent_slice = agents_emb[:, i:i+1, :]
-
-            # Apply positional encoding
-            encoded_slice = self.pos_encoder.forward(agent_slice)
-            
-            # Append the result to the list
-            encoded_agents.append(encoded_slice)
-
-        # Stack the results along the second dimension to get a tensor of shape (T, N*B, H)
-        agents_emb = torch.stack(encoded_agents, dim=1)
-
-        # Put back in original shape
-        agents_emb = agents_emb.view(T, B, N, H)
-
+        
         # Flatten the embeddings and masks
         agents_emb_flat = agents_emb.reshape(T * B, N, H)
         agent_masks_flat = agent_masks.permute(1, 0, 2).reshape(N, T * B)
@@ -348,7 +330,33 @@ class PTR(BaseModel):
         agents_emb = self.agents_dynamic_encoder(agents_tensor).permute(1, 0, 2, 3)  # T, B, N, H
 
         ######################## Your code here ########################
-        # Apply temporal and social attention
+        
+        T, B, N, H = agents_emb.size()
+        # Convert Agents embeddings sizing to (T, B*N, H)
+        agents_emb = agents_emb.permute(0, 2, 1, 3).reshape(T, N * B, H)
+
+        # Initialize a list to hold the results
+        encoded_agents = []
+
+        # Loop over the second dimension (N*B)
+        for i in range(N * B):
+            
+            # Select the slice of shape (T, 1, H)
+            agent_slice = agents_emb[:, i:i+1, :]
+
+            # Apply positional encoding
+            encoded_slice = self.pos_encoder.forward(agent_slice)
+            
+            # Append the result to the list
+            encoded_agents.append(encoded_slice)
+
+        # Stack the results along the second dimension to get a tensor of shape (T, N*B, H)
+        agents_emb = torch.stack(encoded_agents, dim=1)
+
+        # Put back in original shape
+        agents_emb = agents_emb.view(T, B, N, H)
+        
+        # Put through Temporal and Attention Layers
         for layer in self.temporal_attn_layers:
             agents_emb = self.temporal_attn_fn(agents_emb, opps_masks, layer)
         for layer in self.social_attn_layers:
@@ -420,7 +428,7 @@ class PTR(BaseModel):
 
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr= self.config['learning_rate'],eps=0.0001)
+        optimizer = optim.Adam(self.parameters(), lr= self.config['learning_rate'],eps=0.001)
         scheduler = MultiStepLR(optimizer, milestones=self.config['learning_rate_sched'], gamma=0.5,
                                            verbose=True)
         return [optimizer], [scheduler]

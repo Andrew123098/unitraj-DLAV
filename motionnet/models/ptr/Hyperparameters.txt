@@ -1,0 +1,11 @@
+Hyperparameters to Tune:                                                              | Initial Values: |  Testing Values: |
+d_k: Dimensionality of the model's hidden representations.                            |     64          |  128      
+dropout: Dropout probability for regularization.                                      |0.1 (pos_enc=0.0)|  0.3 (pos_enc=0.1)              
+c: Number of modes (trajectories) to predict.                                         |     10          |  12
+num_heads: Number of attention heads in the multi-head attention layers.              |     8           |  16
+num_encoder_layers: Number of transformer encoder layers.                             |                 |
+num_decoder_layers: Number of transformer decoder layers.                             |                 |
+tx_hidden_size: Dimensionality of the feedforward network in the transformer layers.  |                 |
+learning_rate: Learning rate for optimizer.                                           | 0.0001 --> 0.5  |  0.001 --> 0.5
+entropy_weight: Weight for entropy loss in the total loss function.                   |                 |
+kl_weight: Weight for KL divergence loss in the total loss function.                  |                 |
