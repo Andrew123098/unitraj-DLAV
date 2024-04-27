@@ -264,24 +264,24 @@ class PTR(BaseModel):
         :return: (T, B, N, H)
         '''
         ######################## Your code here ########################
-
-        """
-        Put Positional encoder in forward function before attention functions.
-        """
+        # The dimensions are Time (T), Batch size (B), Number of agents (N), and Embedding size (H).
         T, B, N, H = agents_emb.size()
 
         # Put into (T, N*B, H) shape
-        agents_emb = agents_emb.permute(0, 2, 1, 3).reshape(T, N * B, H)
+        agents_emb = agents_emb.reshape(T, N * B, H)
         
         # Pass to positional encoder
         agents_emb = self.pos_encoder.forward(agents_emb)
 
-        # Put back in original shape
-        agents_emb = agents_emb.view(T, B, N, H)
+        # # Put back in original shape
+        # agents_emb = agents_emb.view(T, B, N, H)
+
+        # To avoid NaN from softmax function, set first timesteps to False (B, T, N)
+        agent_masks[:,0,:] = False
 
         # Flatten the embeddings and masks
-        agents_emb_flat = agents_emb.reshape(T * B, N, H)
-        agent_masks_flat = agent_masks.permute(1, 0, 2).reshape(N, T * B)
+        agents_emb_flat = agents_emb#.reshape(T * B, N, H)
+        agent_masks_flat = agent_masks.permute(1, 0, 2).reshape(B*N, T)
 
         # Apply temporal attention layer
         agents_emb_flat = layer(agents_emb_flat, src_key_padding_mask=agent_masks_flat)
@@ -302,17 +302,17 @@ class PTR(BaseModel):
         :return: (T, B, N, H)
         '''
         ######################## Your code here ########################
+        # (NOTE: We do not need to include the agent masks here because the masking is already applied in the temporal attn fn)
         T, B, N, H = agents_emb.size()
 
-        # Flatten the embeddings and masks
-        agents_emb_flat = agents_emb.reshape(T * B, N, H)
-        agent_masks_flat = agent_masks.permute(1, 0, 2).reshape(N, T * B)
+        # Put agents into size (N, B*T, H)
+        agents_emb = agents_emb.permute(2, 1, 0, 3).reshape(N, B*T, H) # N, B*T, H
 
-        # Apply social attention layer
-        agents_emb_flat = layer(agents_emb_flat, src_key_padding_mask=agent_masks_flat)
+        # Apply social attention layer 
+        agents_emb = layer(agents_emb)
 
         # Reshape the embeddings back to their original shape
-        agents_emb = agents_emb_flat.view(T, B, N, H)
+        agents_emb = agents_emb.view(N, B, T, -1).permute(2, 1, 0, 3) # T, B, N, H
         ################################################################
         return agents_emb
 
