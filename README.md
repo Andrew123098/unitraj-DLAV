@@ -1,17 +1,101 @@
-# UniTraj
+# Milestone 1
 
-**A Unified Framework for Cross-Dataset Generalization of Vehicle Trajectory Prediction**
+**Writen By: Andrew Brown and Mònica Espeleta
+  Class: Deep Learning for utonomous Vehicles
+  Code: CIVIL-459
+  Professor: Dr. Alexandre Alahi**
 
-UniTraj is a framework for vehicle trajectory prediction, designed by researchers from VITA lab at EPFL. 
-It provides a unified interface for training and evaluating different models on multiple dataset, and supports easy configuration and logging. 
-Powered by [Hydra](https://hydra.cc/docs/intro/), [Pytorch-lightinig](https://lightning.ai/docs/pytorch/stable/), and [WandB](https://wandb.ai/site), the framework is easy to configure, train and logging.
-In this project, you will be using UniTraj to train and evalulate a model we call PTR (predictive transformer) on the data we have given to you.
+## Summary
+In this code, we have successfully implemented the temporal and social attention functions in the transformer-based
+trajectory prediction deep learning model. 
 
-## Installation
+## Results
+Best minADE6: ~1.5
+
+## Important Code We Added
+In the _forward() function we have implemented the calling of both of the attention functions.
+We also implemented the Temporal and Social Attention functions from scratch. You can see the implmetations below.
+
+### Put through Temporal and Attention Layers
+```bash
+for layer in range(self.L_enc):
+    agents_emb = self.temporal_attn_fn(agents_emb, opps_masks, self.temporal_attn_layers[layer])
+    agents_emb = self.social_attn_fn(agents_emb, opps_masks, self.social_attn_layers[layer])
+```
+
+### Definition of Temporal Attention Function
+```bash
+def temporal_attn_fn(self, agents_emb, agent_masks, layer):
+    '''
+    Gets agents embeddings and agents mask, and applies the temporal attention layer per agent.
+    Make sure to apply the agent mask in the layer function (you could use src_key_padding_mask argument).
+    Also don't forget to use positional encoding.
+    :param agents_emb: (T, B, N, H) # The dimensions are Time (T), Batch size (B), Number of agents (N), and Embedding size (H).
+    :param agent_masks: (B, T, N)
+    :return: (T, B, N, H)
+    '''
+    ######################## Your code here ########################
+    # The dimensions are Time (T), Batch size (B), Number of agents (N), and Embedding size (H).
+    T, B, N, H = agents_emb.size()
+
+    # Put into (T, N*B, H) shape
+    agents_emb = agents_emb.reshape(T, N * B, H)
+    
+    # Pass to positional encoder
+    agents_emb = self.pos_encoder.forward(agents_emb)
+
+    # To avoid NaN from softmax function, set first timesteps to False (B, T, N)
+    agent_masks[:,0,:] = False
+
+    # Flatten the masks
+    agent_masks = agent_masks.permute(1, 0, 2).reshape(B*N, T)
+
+    # Apply temporal attention layer
+    agents_emb = layer(agents_emb, src_key_padding_mask=agent_masks)
+
+    # Reshape the embeddings back to their original shape
+    agents_emb = agents_emb.view(T, B, N, H)
+    
+    ################################################################
+    return agents_emb
+
+```
+
+### Definition of Social Attention Function:
+```bash
+def social_attn_fn(self, agents_emb, agent_masks, layer):
+    '''
+    Gets agents embeddings and agents mask, and applies the social attention layer per time step.
+    Make sure to apply the agent mask in the layer function (you could use src_key_padding_mask argument).
+    You don't need to use positional encoding here.
+    :param agents_emb: (T, B, N, H)
+    :param agent_masks: (B, T, N)
+    :return: (T, B, N, H)
+    '''
+    ######################## Your code here ########################
+    # (NOTE: We do not need to include the agent masks here because the masking is already applied in the temporal attn fn)
+    T, B, N, H = agents_emb.size()
+
+    # Put agents into size (N, B*T, H)
+    agents_emb = agents_emb.permute(2, 1, 0, 3).reshape(N, B*T, H) # N, B*T, H
+
+    # Apply social attention layer 
+    agents_emb = layer(agents_emb)
+
+    # Reshape the embeddings back to their original shape
+    agents_emb = agents_emb.view(N, B, T, -1).permute(2, 1, 0, 3) # T, B, N, H
+    ################################################################
+    return agents_emb
+```
+
+
+## How to Run the Code
+
+### Installation
 
 First start by cloning the repository:
 ```bash
-git clone https://github.com/vita-epfl/unitraj-DLAV.git
+git clone https://github.com/Andrew123098/unitraj-DLAV.git
 cd unitraj-DLAV
 ```
 
@@ -49,64 +133,32 @@ python train.py method=ptr
 ```
 The incomplete PTR model will be trained on several samples of data available in `motionnet/data_samples`.
 
-## Code Structure
-There are three main components in UniTraj: dataset, model and config.
-The structure of the code is as follows:
-```
-motionnet
-├── configs
-│   ├── config.yaml
-│   ├── method
-│   │   ├── ptr.yaml
-├── datasets
-│   ├── base_dataset.py
-│   ├── ptr_dataset.py
-├── models
-│   ├── ptr
-│   ├── base_model
-├── utils
-```
-There is a base config, dataset and model class, and each model has its own config, dataset and model class that inherit from the base class.
+### Running the Code
+1. Change Model in motionnnet-->models-->ptr-->ptr.py
+2. Change Hyperparemeters in motionnet-->configs-->method-->ptr.yaml
+3. Change Run Configuration in motionnet0-->configs-->config.yaml
+4. Run one of the following commands:
 
-## Data
-You can access the data [here](https://drive.google.com/file/d/1mBpTqM5e_Ct6KWQenPUvNUBJWHn3-KUX/view?usp=sharing). For easier use on SCITAS, we have also provided the dataset in scitas on `/work/vita/datasets/DLAV_unitraj`. We have provided a train and validation set, as well as three testing sets of different difficulty levels: easy, medium and hard.
-You will be evaluating your model on the easy test set for the first milestone, and the medium and hard test sets for the second and third milestones, respectively. 
-Don't forget to put the path to the real data in the config file.
-
-
-## Your Task
-Your task is to complete the PTR model and train it on the data we have provided. 
-The model is a transformer-based model that takes the past trajectory of the vehicle and its surrounding agents, along with the map, and predicts the future trajectory.
-![system](https://github.com/vita-epfl/unitraj-DLAV/blob/main/docs/assets/PTR.png?raw=true)
-This is the architecture of the encoder part of model (where you need to implement). Supposing we are given the past t time steps for M agents and we have a feature vector of size $d_K$ for each agent at each time step, the encoder part of the model consists of the following steps:
-1. Add positional encoding to the input features at the time step dimension for distinguish between different time steps.
-2. Perform the temporal attention to capture the dependencies between the trajectories of each agent separately.
-3. Perform the spatial attention to capture the dependencies between the different agents at the same time step.
-These steps are repeated L times to capture the dependencies between the agents and the time steps.
-
-The model is implemented in `motionnet/models/ptr/ptr_model.py` and the config is in `motionnet/configs/method/ptr.yaml`. 
-Take a look at the model and the config to understand the structure of the model and the hyperparameters.
-
-You are asked to complete three parts of the model in `motionnet/models/ptr/ptr_model.py`:
-1. The `temporal_attn_fn` function that computes the attention between the past trajectory and the future trajectory.
-2. The `spatial_attn_fn` function that computes the attention between different agents at the same time step.
-3. The encoder part of the model in the `_forward` function. 
-
-You can find the instructions and some hints in the file itself. 
-
-## Submission and Visualization
-You could follow the steps in the [easy kaggle competition](https://www.kaggle.com/competitions/dlav-vehicle-trajectory-prediction-2024/overview) to submit your results and compare them with the other students in the leaderboard.
-Here are the [medium](https://www.kaggle.com/competitions/dlav-vehicle-trajectory-prediction-medium/overview) and [hard](https://www.kaggle.com/competitions/dlav-vehicle-trajectory-prediction-hard/overview) competitions for the second and third milestones, respectively.
-We have developed a submission script for your convenience. You can run the following command to generate the submission file:
+#### To Train a Model:
+If training an existing model change ckpt_path variable in config.yaml. otherwise leave as null
 ```bash
-python generate_predictions.py method=ptr
+python train.py method=ptr
 ```
-Before running the above command however, you need to put the path to the checkpoint of your trained model on the config file under `ckpt_path`. You can find the checkpoint of your trained model in the `lightning_logs` directory in the root directory of the project. 
-For example, if you have trained your model for 10 epochs, you will find the checkpoint in `lightning_logs/version_0/checkpoints/epoch=10-val/brier_fde=30.93.ckpt`. You need to put the path to this file in the config file.
+#### To Evaluate a Model:
+```bash
+python evaluation.py method=ptr
+```
 
-Additionally, for the `val_data_path` in the config file, you need to put the path to the test data you want to evaluate your model on. For the easy milestone, you can put the path to the easy test data, and for the second and third milestones, you can put the path to the medium and hard test data, respectively.
+#### To Generate Some Basic Visualizations:
+```bash
+python tsne_visualization.py method=ptr
+```
 
-The script will generate a file called `submission.csv` in the root directory of the project. You can submit this file to the kaggle competition. As this file could be big, we suggest you to compress it before submitting it.
-
-In addition, the script will make some visualizations of the predictions and save them in the `visualizations` directory in the root directory of the project. You can take a look at these visualizations to understand how your model is performing.
-It's also needed for the report of the first milestone, so don't forget to include some of them in your report.
+#### To Plot minADE6 Over Epochs:
+```bash
+python generate_loss_plots.py
+```
+#### To Generate a Submission File:
+```bash
+python gnerate_predictions.py method=ptr
+```
