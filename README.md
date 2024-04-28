@@ -1,6 +1,6 @@
 # Milestone 1
 
-**Writen By: Andrew Brown and Mònica Laplana
+**Written By: Andrew Brown and Mònica Laplana
   Class: Deep Learning for Autonomous Vehicles
   Code: CIVIL-459
   Professor: Dr. Alexandre Alahi**
