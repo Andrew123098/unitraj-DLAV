@@ -1,9 +1,16 @@
 # Milestone 1
 
-**Writen By: Andrew Brown and Mònica Espeleta
+**Writen By: Andrew Brown and Mònica Laplana
   Class: Deep Learning for utonomous Vehicles
   Code: CIVIL-459
   Professor: Dr. Alexandre Alahi**
+
+## Table of Contents
+- [Summary](#summary)
+- [Results](#results)
+- [Important Code We Added](#important-code-we-added)
+- [How to Run the Code](#how-to-run-the-code)
+- [Submission](#submission)
 
 ## Summary
 In this code, we have successfully implemented the temporal and social attention functions in the transformer-based
@@ -131,16 +138,16 @@ You can verify the installation of UniTraj via running the training script:
 ```bash
 python train.py method=ptr
 ```
-The incomplete PTR model will be trained on several samples of data available in `motionnet/data_samples`.
+The incomplete PTR model will be trained on several samples of data available in `motionnet/data_samples`. The data can also be accessed [here](https://drive.google.com/file/d/1mBpTqM5e_Ct6KWQenPUvNUBJWHn3-KUX/view?usp=sharing) .
 
 ### Running the Code
 1. Change Model in motionnnet-->models-->ptr-->ptr.py
 2. Change Hyperparemeters in motionnet-->configs-->method-->ptr.yaml
-3. Change Run Configuration in motionnet0-->configs-->config.yaml
+3. Change Run Configuration in motionnet-->configs-->config.yaml
 4. Run one of the following commands:
 
 #### To Train a Model:
-If training an existing model change ckpt_path variable in config.yaml. otherwise leave as null
+If training an existing model change `ckpt_path` variable in `config.yaml`. otherwise leave as null
 ```bash
 python train.py method=ptr
 ```
@@ -162,3 +169,18 @@ python generate_loss_plots.py
 ```bash
 python gnerate_predictions.py method=ptr
 ```
+
+## Submission
+
+You can follow the steps in the [easy kaggle competition](https://www.kaggle.com/competitions/dlav-vehicle-trajectory-prediction-2024/overview) to submit the results and compare them with the other students in the leaderboard.
+
+To generate the submission file run the following command:
+```bash
+python generate_predictions.py method=ptr
+```
+Before running the above command however, you need to put the path to the checkpoint of your trained model on the config file under `ckpt_path`. You can find the checkpoint of your trained model in the `lightning_logs` directory in the root directory of the project. 
+For example, if you have trained your model for 10 epochs, you will find the checkpoint in `lightning_logs/version_0/checkpoints/epoch=10-val/brier_fde=30.93.ckpt`. You need to put the path to this file in the `config.py` file.
+
+Additionally, for the `val_data_path` in the `config.yaml` file, you need to put the path to the test data you want to evaluate your model on.
+
+The script will generate a file called `submission.csv` in the root directory of the project. You can submit this file to the kaggle competition. As this file could be big, we suggest you to compress it before submitting it.
