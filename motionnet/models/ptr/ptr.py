@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from motionnet.models.base_model.base_model import BaseModel
-from torch.optim.lr_scheduler import MultiStepLR
+from torch.optim.lr_scheduler import MultiStepLR, CosineAnnealingLR, CosineAnnealingWarmRestarts
 from torch import optim
 from scipy import special
 from torch.distributions import MultivariateNormal, Laplace
@@ -273,21 +273,17 @@ class PTR(BaseModel):
         # Pass to positional encoder
         agents_emb = self.pos_encoder.forward(agents_emb)
 
-        # # Put back in original shape
-        # agents_emb = agents_emb.view(T, B, N, H)
-
         # To avoid NaN from softmax function, set first timesteps to False (B, T, N)
         agent_masks[:,0,:] = False
 
-        # Flatten the embeddings and masks
-        agents_emb_flat = agents_emb#.reshape(T * B, N, H)
-        agent_masks_flat = agent_masks.permute(1, 0, 2).reshape(B*N, T)
+        # Flatten the masks
+        agent_masks = agent_masks.permute(1, 0, 2).reshape(B*N, T)
 
         # Apply temporal attention layer
-        agents_emb_flat = layer(agents_emb_flat, src_key_padding_mask=agent_masks_flat)
+        agents_emb = layer(agents_emb, src_key_padding_mask=agent_masks)
 
         # Reshape the embeddings back to their original shape
-        agents_emb = agents_emb_flat.view(T, B, N, H)
+        agents_emb = agents_emb.view(T, B, N, H)
         
         ################################################################
         return agents_emb
@@ -411,8 +407,20 @@ class PTR(BaseModel):
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr= self.config['learning_rate'],eps=0.001)
-        scheduler = MultiStepLR(optimizer, milestones=self.config['learning_rate_sched'], gamma=0.5,
-                                           verbose=True)
+        if self.config['scheduler'] == 'multistep':
+            scheduler = MultiStepLR(optimizer, milestones=self.config['learning_rate_sched'], gamma=0.5,
+                                            verbose=True)
+        elif self.config['scheduler'] == 'cos':
+            # T_max: Number of epochs b/w each restart
+            # eta_min: minimum learning rate at end of cycle
+            # last_epoch: index of las epoch
+            scheduler = CosineAnnealingLR(optimizer, T_max=25, eta_min=0, last_epoch=-1)
+        elif self.config['scheduler'] == 'warm':
+            # T_0: # of iters for first restart
+            # T_mult: Factor to multiply number of iters b/w each restart
+            # eta_min: minimum learning rate
+            # last_epoch: index of the last epoch
+            scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2, eta_min=0, last_epoch=-1)
         return [optimizer], [scheduler]
 
 
