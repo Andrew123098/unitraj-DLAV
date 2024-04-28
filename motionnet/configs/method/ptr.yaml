@@ -6,17 +6,18 @@ num_encoder_layers: 2
 num_decoder_layers: 2
 tx_hidden_size: 384
 tx_num_heads: 16
-dropout: 0.1
+dropout: 0.25
 entropy_weight: 40.0
 kl_weight: 20.0
 use_FDEADE_aux_loss: True
 
 # train
-max_epochs: 100 
+max_epochs: 200
 learning_rate: 0.00075 
-learning_rate_sched: [10, 20, 30, 40, 50]
+learning_rate_sched: [10, 20, 30, 50, 70, 90]
+weight_decay: 0.00001
 optimizer: Adam 
-scheduler: multistep 
+scheduler: cos 
 ewc_lambda: 2000
 train_batch_size: 128 
 eval_batch_size: 256 
