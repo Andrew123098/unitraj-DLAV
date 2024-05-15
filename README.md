@@ -1,4 +1,4 @@
-# Milestone 1
+# Milestone 2
 
 **Written By: Andrew Brown and Mònica Laplana
   Class: Deep Learning for Autonomous Vehicles
@@ -9,18 +9,19 @@
 - [Summary](#summary)
 - [Results](#results)
 - [Important Code We Added](#important-code-we-added)
+- [Hyperparameters](#hyperparameters)
 - [How to Run the Code](#how-to-run-the-code)
 - [Submission](#submission)
 
 ## Summary
-In this code, we have successfully implemented the temporal and social attention functions in the transformer-based
-trajectory prediction deep learning model. 
+After a successful implementation of the temporal and social attention functions in the transformer-based
+trajectory prediction deep learning model in Milestone 1, we have made enhancements and done hyperparameter tuning to improve model performance. The most significant improvement was seen when we added L2 reguarisation. 
 
 ## Results
-Best minADE6: ~1.5
+Best minADE6 (mediun Kaggle competition) : ~ 0.94
 
 ## Important Code We Added
-In the _forward() function we have implemented the calling of both of the attention functions.
+In Milestone 1, in the _forward() function we have implemented the calling of both of the attention functions.
 We also implemented the Temporal and Social Attention functions from scratch. You can see the implmetations below.
 
 ### Put through Temporal and Attention Layers
@@ -94,7 +95,88 @@ def social_attn_fn(self, agents_emb, agent_masks, layer):
     ################################################################
     return agents_emb
 ```
+## Hyperparameters
+```bash
+ptr.yaml
 
+# common
+model_name: ptr
+num_modes: 6
+hidden_size: 64
+num_encoder_layers: 2
+num_decoder_layers: 2
+tx_hidden_size: 384
+tx_num_heads: 16
+dropout: 0.1
+entropy_weight: 40.0
+kl_weight: 20.0
+use_FDEADE_aux_loss: True
+
+# train
+max_epochs: 400
+learning_rate: 0.0005 
+learning_rate_sched: [10, 20, 30, 50, 70, 90]
+weight_decay: 0.00001
+optimizer: Adam 
+scheduler: cos 
+ewc_lambda: 2000
+train_batch_size: 128 
+eval_batch_size: 256 
+grad_clip_norm: 5
+
+# data related
+max_num_agents: 15
+map_range: 100
+max_num_roads: 256
+max_points_per_lane: 20 
+manually_split_lane: False
+point_sampled_interval: 1
+num_points_each_polyline: 20
+vector_break_dist_thresh: 1.0
+```
+
+```bash
+config.yaml
+
+exp_name: test
+ckpt_path: null
+seed: 42
+debug: true
+devices:
+- 0
+load_num_workers: 0
+train_data_path:
+- /home/ambrown/dlav/dlav_data/train
+val_data_path:
+- /home/ambrown/dlav/dlav_data/val
+max_data_num:
+- 180000
+past_len: 21
+future_len: 60
+object_type:
+- VEHICLE
+- PEDESTRIAN
+- CYCLIST
+line_type:
+- lane
+- stop_sign
+- road_edge
+- road_line
+- crosswalk
+- speed_bump
+masked_attributes:
+- z_axis, size
+trajectory_sample_interval: 1
+only_train_on_ego: false
+center_offset_of_map:
+- 30.0
+- 0.0
+use_cache: false
+overwrite_cache: false
+store_data_in_memory: false
+nuscenes_dataroot: /mnt/nas3_rcp_enac_u0900_vita_scratch/datasets/Prediction-Dataset/nuscenes/nuscenes_root
+eval_nuscenes: false
+eval_waymo: false
 
 ## How to Run the Code
 
@@ -172,7 +254,7 @@ python gnerate_predictions.py method=ptr
 
 ## Submission
 
-You can follow the steps in the [easy kaggle competition](https://www.kaggle.com/competitions/dlav-vehicle-trajectory-prediction-2024/overview) to submit the results and compare them with the other students in the leaderboard.
+You can follow the steps in the [medium kaggle competition](https://www.kaggle.com/competitions/dlav-vehicle-trajectory-prediction-medium/overview) to submit the results and compare them with the other students in the leaderboard.
 
 To generate the submission file run the following command:
 ```bash
