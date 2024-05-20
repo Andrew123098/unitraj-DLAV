@@ -213,7 +213,7 @@ class PTR(BaseModel):
         self.tx_decoder = nn.ModuleList(self.tx_decoder)
 
         # ============================== Positional encoder ==============================
-        self.pos_encoder = PositionalEncoding(self.d_k, dropout=0.1, max_len=self.past)
+        self.pos_encoder = PositionalEncoding(self.d_k, dropout=0.0, max_len=self.past)
 
         # ============================== OUTPUT MODEL ==============================
         self.output_model = OutputModel(d_k=self.d_k)
@@ -277,7 +277,8 @@ class PTR(BaseModel):
         agent_masks[:,0,:] = False
 
         # Flatten the masks
-        agent_masks = agent_masks.permute(1, 0, 2).reshape(B*N, T)
+        agent_masks = agent_masks.permute(1, 0, 2)
+        agent_masks = agent_masks.reshape(T, B*N).T
 
         # Apply temporal attention layer
         agents_emb = layer(agents_emb, src_key_padding_mask=agent_masks)
@@ -302,13 +303,15 @@ class PTR(BaseModel):
         T, B, N, H = agents_emb.size()
 
         # Put agents into size (N, B*T, H)
-        agents_emb = agents_emb.permute(2, 1, 0, 3).reshape(N, B*T, H) # N, B*T, H
+        agents_emb = agents_emb.permute(2, 1, 0, 3)
+        agents_emb = agents_emb.reshape(N, B*T, H) # N, B*T, H
 
         # Apply social attention layer 
         agents_emb = layer(agents_emb)
 
         # Reshape the embeddings back to their original shape
-        agents_emb = agents_emb.view(N, B, T, -1).permute(2, 1, 0, 3) # T, B, N, H
+        agents_emb = agents_emb.view(N, B, T, H)
+        agents_emb = agents_emb.permute(2, 1, 0, 3) # T, B, N, H
         ################################################################
         return agents_emb
 
@@ -406,7 +409,7 @@ class PTR(BaseModel):
 
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr= self.config['learning_rate'],eps=0.001)
+        optimizer = optim.Adam(self.parameters(), lr= self.config['learning_rate'],eps=0.001,weight_decay=1e-5)
         if self.config['scheduler'] == 'multistep':
             scheduler = MultiStepLR(optimizer, milestones=self.config['learning_rate_sched'], gamma=0.5,
                                             verbose=True)
@@ -414,13 +417,13 @@ class PTR(BaseModel):
             # T_max: Number of epochs b/w each restart
             # eta_min: minimum learning rate at end of cycle
             # last_epoch: index of las epoch
-            scheduler = CosineAnnealingLR(optimizer, T_max=25, eta_min=0, last_epoch=-1)
+            scheduler = CosineAnnealingLR(optimizer, T_max=30, eta_min=0, last_epoch=-1,)
         elif self.config['scheduler'] == 'warm':
             # T_0: # of iters for first restart
             # T_mult: Factor to multiply number of iters b/w each restart
             # eta_min: minimum learning rate
             # last_epoch: index of the last epoch
-            scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2, eta_min=0, last_epoch=-1)
+            scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=1.3, eta_min=0, last_epoch=-1)
         return [optimizer], [scheduler]
 
 
