@@ -1,6 +1,7 @@
-# Milestone 2
+# Milestone 3
 
 **Written By: Andrew Brown and Mònica Laplana
+  SCIPERs: 370751 and 384930
   Class: Deep Learning for Autonomous Vehicles
   Code: CIVIL-459
   Professor: Dr. Alexandre Alahi**
@@ -15,10 +16,10 @@
 
 ## Summary
 After a successful implementation of the temporal and social attention functions in the transformer-based
-trajectory prediction deep learning model in Milestone 1, we have made enhancements and done hyperparameter tuning to improve model performance. The most significant improvement was seen when we added L2 reguarisation. 
+trajectory prediction deep learning model in Milestone 1, we have made enhancements and done hyperparameter tuning to improve model performance. The most significant improvement was seen when we added L2 reguarisation made in Milestone 2. For the last Milestone we tried to improve the PTR model instead of implementing a a new one from a research paper. 
 
 ## Results
-Best minADE6 (mediun Kaggle competition) : ~ 0.94
+Best minADE6 (hard Kaggle competition) : ~ 0.98
 
 ## Important Code We Added
 In Milestone 1, in the _forward() function we have implemented the calling of both of the attention functions.
@@ -254,7 +255,7 @@ python gnerate_predictions.py method=ptr
 
 ## Submission
 
-You can follow the steps in the [medium kaggle competition](https://www.kaggle.com/competitions/dlav-vehicle-trajectory-prediction-medium/overview) to submit the results and compare them with the other students in the leaderboard.
+You can follow the steps in the [hard kaggle competition](https://www.kaggle.com/competitions/dlav-vehicle-trajectory-prediction-hard/overview) to submit the results and compare them with the other students in the leaderboard.
 
 To generate the submission file run the following command:
 ```bash
