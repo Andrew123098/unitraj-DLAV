@@ -277,8 +277,7 @@ class PTR(BaseModel):
         agent_masks[:,0,:] = False
 
         # Flatten the masks
-        agent_masks = agent_masks.permute(1, 0, 2)
-        agent_masks = agent_masks.reshape(T, B*N).T
+        agent_masks = agent_masks.permute(1, 0, 2).reshape(T, B*N).T
 
         # Apply temporal attention layer
         agents_emb = layer(agents_emb, src_key_padding_mask=agent_masks)
@@ -303,15 +302,14 @@ class PTR(BaseModel):
         T, B, N, H = agents_emb.size()
 
         # Put agents into size (N, B*T, H)
-        agents_emb = agents_emb.permute(2, 1, 0, 3)
-        agents_emb = agents_emb.reshape(N, B*T, H) # N, B*T, H
+        agents_emb = agents_emb.permute(2, 1, 0, 3).reshape(N, B*T, H) # N, B*T, H
 
         # Apply social attention layer 
         agents_emb = layer(agents_emb)
 
         # Reshape the embeddings back to their original shape
-        agents_emb = agents_emb.view(N, B, T, H)
-        agents_emb = agents_emb.permute(2, 1, 0, 3) # T, B, N, H
+        agents_emb = agents_emb.view(N, B, T, H).permute(2, 1, 0, 3) # T, B, N, H
+
         ################################################################
         return agents_emb
 
