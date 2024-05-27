@@ -6,6 +6,9 @@
   Code: CIVIL-459
   Professor: Dr. Alexandre Alahi**
 
+## Link to Vita-Students Repository
+https://github.com/vita-student-projects/DeepForce
+
 ## Table of Contents
 - [Summary](#summary)
 - [Results](#results)
@@ -19,11 +22,13 @@ After a successful implementation of the temporal and social attention functions
 trajectory prediction deep learning model in Milestone 1, we have made enhancements and done hyperparameter tuning to improve model performance. The most significant improvement was seen when we added L2 reguarisation made in Milestone 2. For the last Milestone we tried to improve the PTR model instead of implementing a a new one from a research paper. 
 
 ## Results
-Best minADE6 (hard Kaggle competition) : ~ 0.98
+Best minADE6 (hard Kaggle competition) : ~ 0.98855
 
 ## Important Code We Added
 In Milestone 1, in the _forward() function we have implemented the calling of both of the attention functions.
 We also implemented the Temporal and Social Attention functions from scratch. You can see the implmetations below.
+
+In Milestone 2 and 3 we included different learning rate schedulers and L2 regularization which can be found in models/ptr/ptr.py.
 
 ### Put through Temporal and Attention Layers
 ```bash
@@ -108,7 +113,7 @@ num_encoder_layers: 2
 num_decoder_layers: 2
 tx_hidden_size: 384
 tx_num_heads: 16
-dropout: 0.1
+dropout: 0.2
 entropy_weight: 40.0
 kl_weight: 20.0
 use_FDEADE_aux_loss: True
@@ -151,7 +156,7 @@ train_data_path:
 val_data_path:
 - /home/ambrown/dlav/dlav_data/val
 max_data_num:
-- 180000
+- 120000
 past_len: 21
 future_len: 60
 object_type:
